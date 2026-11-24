@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lael & Maria Photobooth</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#f7f0ed;color:#49352f;
+ font-family:Georgia,serif;text-align:center;padding:22px 14px;
+}
+h1{font-size:30px;margin:8px 0;color:#713d43}
+.sub{font-size:13px;letter-spacing:3px;margin-bottom:22px}
+.container{max-width:440px;margin:auto}
+video{
+ width:100%;border-radius:15px;background:#222;
+ aspect-ratio:4/5;object-fit:cover;transform:scaleX(-1);
+}
+select,button{
+ width:100%;padding:14px;border-radius:10px;
+ border:1px solid #c7a59b;margin:8px 0;
+ font-size:15px;
+}
+button{background:#713d43;color:white;border:0;font-weight:bold}
+button:disabled{opacity:.5}
+#count{font-size:42px;font-weight:bold;color:#a34c54;height:50px}
+#result{width:100%;margin-top:15px;border-radius:8px}
+#download{display:none;background:#9b735e}
+#again{display:none;background:#777}
+.note{font-size:12px;color:#806e65;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Lael & Maria</h1>
+<div class="sub">WEDDING PHOTOBOOTH</div>
+
+<video id="camera" autoplay playsinline muted></video>
+
+<div id="count"></div>
+
+<label for="frame">Pilih desain frame:</label>
+<select id="frame">
+<option value="0">01 - Burgundy Elegance</option>
+<option value="1">02 - Classic Gold</option>
+<option value="2">03 - Romantic Rose</option>
+<option value="3">04 - Minimalist White</option>
+<option value="4">05 - Vintage Brown</option>
+<option value="5">06 - Royal Mahogany</option>
+<option value="6">07 - Floral Garden</option>
+<option value="7">08 - Blush Pink</option>
+<option value="8">09 - Black Luxury</option>
+<option value="9">10 - Champagne</option>
+</select>
+
+<button id="start">AKTIFKAN KAMERA</button>
+<button id="capture" disabled>AMBIL FOTO</button>
+
+<canvas id="canvas" width="1080" height="1350"
+style="display:none"></canvas>
+
+<img id="result" style="display:none" alt="Hasil foto">
+
+<button id="download">DOWNLOAD FOTO</button>
+<button id="again">AMBIL FOTO ULANG</button>
+
+<p class="note">
+Lael & Maria Wedding<br>
+A day to remember, a love to last forever.
+</p>
+</div>
+
+<script>
+const video=document.getElementById('camera');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const count=document.getElementById('count');
+const result=document.getElementById('result');
+const capture=document.getElementById('capture');
+const download=document.getElementById('download');
+const again=document.getElementById('again');
+
+let stream=null;
+
+const themes=[
+ {bg:'#702f3c',gold:'#e6c69c',text:'#fff5e9'},
+ {bg:'#f8edda',gold:'#a47b3e',text:'#67492d'},
+ {bg:'#f4dfe1',gold:'#a75b69',text:'#713d43'},
+ {bg:'#fffaf4',gold:'#bba18d',text:'#594b43'},
+ {bg:'#80604c',gold:'#e5c6a1',text:'#fff4df'},
+ {bg:'#542c30',gold:'#c5a16d',text:'#fff0dc'},
+ {bg:'#e5e9dc',gold:'#8a9b78',text:'#4e6046'},
+ {bg:'#f5dce1',gold:'#c28c99',text:'#713d50'},
+ {bg:'#171717',gold:'#d5b574',text:'#fff2d6'},
+ {bg:'#f1e0c5',gold:'#bb9561',text:'#70513b'}
+];
+
+async function startCamera(){
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:"user",width:{ideal:1920},height:{ideal:1080}},
+   audio:false
+  });
+  video.srcObject=stream;
+  await video.play();
+  capture.disabled=false;
+  document.getElementById('start').textContent='KAMERA AKTIF';
+ }catch(e){
+  alert('Kamera tidak bisa diakses. Izinkan akses kamera melalui pengaturan browser dan pastikan website menggunakan HTTPS.');
+ }
+}
+
+function drawPhoto(){
+ const w=canvas.width,h=canvas.height;
+ const t=themes[Number(document.getElementById('frame').value)];
+
+ // Foto portrait memenuhi kanvas
+ const vw=video.videoWidth,vh=video.videoHeight;
+ const scale=Math.max(w/vw,h/vh);
+ const sw=w/scale,sh=h/scale;
+ const sx=(vw-sw)/2,sy=(vh-sh)/2;
+
+ ctx.save();
+ ctx.translate(w,0);
+ ctx.scale(-1,1);
+ ctx.drawImage(video,sx,sy,sw,sh,0,0,w,h);
+ ctx.restore();
+
+ // Bingkai
+ ctx.strokeStyle=t.gold;
+ ctx.lineWidth=22;
+ ctx.strokeRect(18,18,w-36,h-36);
+
+ ctx.strokeStyle=t.text;
+ ctx.lineWidth=3;
+ ctx.strokeRect(39,39,w-78,h-78);
+
+ // Panel bawah
+ ctx.fillStyle=t.bg;
+ ctx.fillRect(40,1110,1000,198);
+
+ ctx.textAlign='center';
+ ctx.fillStyle=t.gold;
+ ctx.font='italic 42px Georgia';
+ ctx.fillText('Together Forever',540,1170);
+
+ ctx.fillStyle=t.text;
+ ctx.font='bold 54px Georgia';
+ ctx.fillText('LAEL & MARIA',540,1240);
+
+ ctx.fillStyle=t.gold;
+ ctx.font='28px Georgia';
+ ctx.fillText('OUR WEDDING DAY  ♥',540,1282);
+
+ // Hiasan sudut
+ ctx.strokeStyle=t.gold;
+ ctx.lineWidth=5;
+ [[65,65],[1015,65],[65,1085],[1015,1085]].forEach(([x,y])=>{
+  ctx.beginPath();
+  ctx.arc(x,y,18,0,Math.PI*2);
+  ctx.stroke();
+ });
+
+ result.src=canvas.toDataURL('image/jpeg',0.95);
+ result.style.display='block';
+ download.style.display='block';
+ again.style.display='block';
+}
+
+capture.addEventListener('click',()=>{
+ capture.disabled=true;
+ let n=3;
+ count.textContent=n;
+
+ const timer=setInterval(()=>{
+  n--;
+  count.textContent=n>0?n:'Senyum! ♥';
+  if(n<=0){
+   clearInterval(timer);
+   drawPhoto();
+   count.textContent='';
+   capture.disabled=false;
+   result.scrollIntoView({behavior:'smooth'});
+  }
+ },1000);
+});
+
+download.addEventListener('click',()=>{
+ const link=document.createElement('a');
+ link.href=canvas.toDataURL('image/jpeg',0.95);
+ link.download='Lael-Maria-Photobooth.jpg';
+ link.click();
+});
+
+again.addEventListener('click',()=>{
+ result.style.display='none';
+ download.style.display='none';
+ again.style.display='none';
+ capture.scrollIntoView({behavior:'smooth'});
+});
+
+document.getElementById('start').addEventListener('click',startCamera);
+</script>
+</body>
+</html>
